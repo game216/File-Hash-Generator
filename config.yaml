@@ -1,0 +1,14 @@
+#base file path
+#you may add multiple directories to clear, like:
+# basePath: ['C:\my\path\to\clean\up\01',
+# 'C:\my\path\to\clean\up\02',
+# 'C:\my\path\to\clean\up\03']
+# etc...
+basePath: ['C:\MY-DIRECTORY-OF-FILES'
+]
+
+#key 'unit' accepts 'maxDays' or 'maxFiles'
+unit: 'maxFiles'
+
+#key 'count' accepts an integer
+count: 12
