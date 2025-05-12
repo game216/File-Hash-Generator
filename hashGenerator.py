@@ -8,54 +8,37 @@ Created on Mon Mar 20 13:26:00 2023
 import yaml #pip install PyYAML
 import os
 import readYAML #my personal file
+import fileObject #my personal file
 import time
 import io, hashlib, hmac
 from datetime import datetime
 import sys
 
-def filesInDIR(dir):
-    """
-    uses os.scandir
-
-    Returns
-    -------
-    None.
-
-    """
-    filesInPaths = ""
-    spaces = ''
-    BLOCK_SIZE = 1048576
+def hashFile(filePath):
     
-    for entry in os.scandir(dir):
-        try:
-            #read the file
-            if os.path.isdir(entry.path):
-                filesInPaths += filesInDIR(entry.path)
-            elif os.path.isfile(entry.path):
-                #print(entry.path)
-                print("\rfile: " + entry.path + " ", end="")
-                spaces = " " * int(len(entry.path) + 6)
-                with open(entry.path, "rb") as f:
-                    file_hash = hashlib.sha256()
-                    fb = f.read(BLOCK_SIZE)
-                    while len(fb) > 0:
-                        file_hash.update(fb)
-                        fb = f.read(BLOCK_SIZE)
-                    filesInPaths +=  file_hash.hexdigest() + "," + entry.path + "\n"
-                #print("\b")
-            else:  
-                print("It is a special file (socket, FIFO, device file): " + entry.path )
-                #TODO: if dir+path is too long, it reaches here
-        except:
-            print(datetime.today(), "#error Oops! I am unable to read file! The error returned is:", sys.exc_info()[0])
-            print(datetime.today(), "#error", sys.exc_info()[1])
+    BLOCK_SIZE = 1048576
+    try:
+        with open(filePath, "rb") as f:
+            file_hash = hashlib.sha256()
+            fb = f.read(BLOCK_SIZE)
+            while len(fb) > 0:
+                file_hash.update(fb)
+                fb = f.read(BLOCK_SIZE)
+            return file_hash.hexdigest()
+    except:
+        print(datetime.today(), "#error Oops! I am unable to read file! The error returned is:", sys.exc_info()[0])
+        print(datetime.today(), "#error", sys.exc_info()[1])
+        print(datetime.today(), "#error If the total length of the path and name exceeds 256 characters, it might be the fault:" + str(len(filePath)))
+        
+        return ""
 
-        #clear the line here
-        #the leading \r is important
-        print("\r" + spaces, end='\r')
-    return filesInPaths
+def hashFilesList(dirList):
+    
+    for i in range(len(dirList)):
+        dirList[i].hashValue = hashFile(dirList[i].basePath + dirList[i].filePath)
 
-def countFiles(dir):
+
+def countFiles(dir, basePath):
     """
     This function counts the number of files to generate hashes of.
 
@@ -64,6 +47,7 @@ def countFiles(dir):
     An array of files with absolute path.
 
     """
+    #print("Looping through directory " + dir)
     filePaths = []
     spaces = ''
     for entry in os.scandir(dir):
@@ -71,17 +55,41 @@ def countFiles(dir):
         try:
             # read the file
             if os.path.isdir(entry.path):
-                filePaths += countFiles(entry.path)
-                #filePaths.append(countFiles(entry.path))
+                filePaths += countFiles(entry.path, basePath) #recursive function call.
             elif os.path.isfile(entry.path):
-                print("\rfile: " + entry.path + "", end='')
+                print("\rfile: " + entry.path[len(basePath):] + "", end='')
+                #print(entry.path[len(basePath):])
+                
                 #compute hash here
-                spaces = " " * int(len(entry.path) + 6)
-                #print("file: " + entry.path + "", end="\n")
+                spaces = " " * int(len(entry.path[len(basePath):]) + 6)
+
                 #time.sleep(0.2) #sleep just to see the output
-                filePaths.append(entry.path)
+                path = entry.path[len(basePath):]
+                
+                newFile = fileObject.fileObject(basePath, path, "")
+                filePaths.append(newFile)
+                
+                #filePaths.append(entry.path)
+            elif os.path.isabs(entry.path):
+                print("abs: " + entry.path[len(basePath):] + "", end="\n")
+                spaces = " " * int(len(entry.path[len(basePath):]) + 6)
+                
+                path = entry.path[len(basePath):]
+                newFile = fileObject.fileObject(basePath, path, "")
+                filePaths.append(newFile)
+                
+            elif os.path.isjunction(entry.path):
+                print("os.path.isjunction " + entry.path )
+            elif os.path.islink(entry.path):
+                print("os.path.islink " + entry.path )
+            elif os.path.ismount(entry.path):
+                print("os.path.ismount " + entry.path )
+            elif os.path.isdevdrive(entry.path):
+                print("os.path.isdevdrive " + entry.path )
+            elif os.path.isreserved(entry.path):
+                print("os.path.isreserved " + entry.path )
             else:
-                print("It is a special file (socket, FIFO, device file): " + entry.path )
+                print("unknown file type: " + entry.path )
             #clear the line here
             #the leading \r is important
             print("\r" + spaces, end='\r') 
@@ -97,30 +105,47 @@ def writeFile(filesInPaths):
     print("Writing hashes to file now.")
     timeNow = datetime.today()
     fileName_time = timeNow.strftime("%Y%m%d_%H%M%S-%f")
+    
     try:
         with open(fileName_time + "_fileHash.csv", "w") as file:
-            file.write("Hash,File Path\n")
-            file.write(filesInPaths)
+            file.write("Hash Value,Base Path,File Path\n")
+            for i in range(len(filesInPaths)):
+                try:
+                    file.write(filesInPaths[i].csvOutput())
+                except:
+                    print(datetime.today(), "#error writeFile() Oops! I am unable to write to file! The error returned is:", sys.exc_info()[0])
+                    print(datetime.today(), "#error writeFile()", sys.exc_info()[1])
+                    print(datetime.today(), "#error writeFile() the file is:", filesInPaths[i].basePath, filesInPaths[i].filePath)
     except:
-        print(datetime.today(), "Oops! I am unable to write to file! The error returned is:", sys.exc_info()[0])
-        print(datetime.today(), sys.exc_info()[1])
-        sys.exit()
+        print(datetime.today(), "#error writeFile() Oops! I am unable to write to file! The error returned is:", sys.exc_info()[0])
+        print(datetime.today(), "#error writeFile()", sys.exc_info()[1])
+        #sys.exit()
 
 # configFile = sys.argv[1]
 config = readYAML.readConfig(sys.argv[1])
 print("begin os.scandir:")
 
-filesInPaths = ""
 
 filePaths = []
 for directory in config["basePath"]:
-    filePaths += countFiles(directory)
+    print("Looping through directory and sub-directories: " + directory["path"])
+    recursive = False
+    if(directory["recursive"] == "y"):
+        recursive = True
+    print("Recursive:", recursive)
+    filePaths += countFiles(directory["path"], directory["path"])
 
 print("There are " + str(len(filePaths)) + " files", end="\n")
 
+#hashFilesList(filePaths) #pass by reference note
+
+writeFile(filePaths) #pass by reference note
+
+"""
 for directory in config["basePath"]:
     print("\nLooping through directory ", directory)
     filesInPaths += filesInDIR(directory)
 
 #print(filesInPaths)
 writeFile(filesInPaths)
+"""
