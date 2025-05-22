@@ -4,8 +4,14 @@
 # 'C:\my\path\to\clean\up\02',
 # 'C:\my\path\to\clean\up\03']
 # etc...
-basePath: ['C:\MY-DIRECTORY-OF-FILES'
+basePath: [
+{
+    path: 'C:\MY-DIRECTORY-OF-FILES',
+    recursive: 'y'
+}
 ]
+
+writeFileEncoding: 'utf-16'
 
 #key 'unit' accepts 'maxDays' or 'maxFiles'
 unit: 'maxFiles'

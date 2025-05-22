@@ -15,6 +15,20 @@ from datetime import datetime
 import sys
 
 def hashFile(filePath):
+    """
+    Generate a sha256 hash of a file, given the absolute directory of a file.
+
+    Attributes
+    ----------
+    filePath : str
+        The absolute path of the file to generate the hash value of.
+    
+    Returns
+    -------
+    str
+        The sha256 has value of the file in string.
+
+    """
     
     BLOCK_SIZE = 1048576
     try:
@@ -33,12 +47,25 @@ def hashFile(filePath):
         return ""
 
 def hashFilesList(dirList):
+    """
+    Takes in an array of fileObject objects. All the files in the array will have its hash generated.
+
+    Attributes
+    ----------
+    dirList : array
+        An array of fileObject objects. Note that Python reads the parameter as a reference.
     
+    Returns
+    -------
+    Nothing. The hashValue property of the fileObject objects inside the array will be updated with the hash value.
+    The function uses the reference of the array.
+
+    """
     for i in range(len(dirList)):
         dirList[i].hashValue = hashFile(dirList[i].basePath + dirList[i].filePath)
 
 
-def countFiles(dir, basePath):
+def countFiles(dir, basePath, recursive):
     """
     This function counts the number of files to generate hashes of.
 
@@ -54,8 +81,8 @@ def countFiles(dir, basePath):
         
         try:
             # read the file
-            if os.path.isdir(entry.path):
-                filePaths += countFiles(entry.path, basePath) #recursive function call.
+            if os.path.isdir(entry.path) and recursive:
+                filePaths += countFiles(entry.path, basePath, recursive) #recursive function call.
             elif os.path.isfile(entry.path):
                 print("\rfile: " + entry.path[len(basePath):] + "", end='')
                 #print(entry.path[len(basePath):])
@@ -72,11 +99,13 @@ def countFiles(dir, basePath):
                 #filePaths.append(entry.path)
             elif os.path.isabs(entry.path):
                 print("abs: " + entry.path[len(basePath):] + "", end="\n")
+                # skip abs
+                """
                 spaces = " " * int(len(entry.path[len(basePath):]) + 6)
-                
                 path = entry.path[len(basePath):]
                 newFile = fileObject.fileObject(basePath, path, "")
                 filePaths.append(newFile)
+                """
                 
             elif os.path.isjunction(entry.path):
                 print("os.path.isjunction " + entry.path )
@@ -101,13 +130,28 @@ def countFiles(dir, basePath):
     #print("\r", end='\n')
     return filePaths
     
-def writeFile(filesInPaths):
+def writeFile(filesInPaths, fileEncoding):
+    """
+    Takes in an array of fileObject objects. 
+
+    Attributes
+    ----------
+    filesInPaths : array
+        An array of fileObject objects. Note that Python reads the parameter as a reference.
+    
+    Returns
+    -------
+    Nothing. A csv file is written out with the hash values and directories of the files.
+    The function uses the reference of the array.
+
+    """
+    
     print("Writing hashes to file now.")
     timeNow = datetime.today()
     fileName_time = timeNow.strftime("%Y%m%d_%H%M%S-%f")
     
     try:
-        with open(fileName_time + "_fileHash.csv", "w") as file:
+        with open(fileName_time + "_fileHash.csv", "w", encoding=fileEncoding) as file:
             file.write("Hash Value,Base Path,File Path\n")
             for i in range(len(filesInPaths)):
                 try:
@@ -123,6 +167,17 @@ def writeFile(filesInPaths):
 
 # configFile = sys.argv[1]
 config = readYAML.readConfig(sys.argv[1])
+
+# debugging output
+"""
+print("Paths to look at:")
+for directory in config["basePath"]:
+    print("Path: " + directory["path"] + "\n\tRecursive: " + directory["recursive"])
+
+print("write file encoding: " + config["writeFileEncoding"])
+"""
+# debugging output end
+
 print("begin os.scandir:")
 
 
@@ -133,19 +188,10 @@ for directory in config["basePath"]:
     if(directory["recursive"] == "y"):
         recursive = True
     print("Recursive:", recursive)
-    filePaths += countFiles(directory["path"], directory["path"])
+    filePaths += countFiles(directory["path"], directory["path"], recursive)
 
 print("There are " + str(len(filePaths)) + " files", end="\n")
 
-#hashFilesList(filePaths) #pass by reference note
+hashFilesList(filePaths) #pass by reference note
 
-writeFile(filePaths) #pass by reference note
-
-"""
-for directory in config["basePath"]:
-    print("\nLooping through directory ", directory)
-    filesInPaths += filesInDIR(directory)
-
-#print(filesInPaths)
-writeFile(filesInPaths)
-"""
+writeFile(filePaths, config["writeFileEncoding"]) #pass by reference note
