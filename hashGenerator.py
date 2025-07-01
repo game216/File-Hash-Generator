@@ -61,8 +61,9 @@ def hashFilesList(dirList):
     The function uses the reference of the array.
 
     """
+    # TODO: output progress of hashing
     for i in range(len(dirList)):
-        dirList[i].hashValue = hashFile(dirList[i].basePath + dirList[i].filePath)
+        dirList[i].hashValue = hashFile(dirList[i].fullFilePath())
 
 
 def countFiles(dir, basePath, recursive):
@@ -152,10 +153,10 @@ def writeFile(filesInPaths, fileEncoding):
     
     try:
         with open(fileName_time + "_fileHash.csv", "w", encoding=fileEncoding) as file:
-            file.write("Hash Value,Base Path,File Path\n")
+            file.write("Hash Value\tBase Path\tFile Path\tFile Name\n")
             for i in range(len(filesInPaths)):
                 try:
-                    file.write(filesInPaths[i].csvOutput())
+                    file.write(filesInPaths[i].csvOutput("\t"))
                 except:
                     print(datetime.today(), "#error writeFile() Oops! I am unable to write to file! The error returned is:", sys.exc_info()[0])
                     print(datetime.today(), "#error writeFile()", sys.exc_info()[1])
