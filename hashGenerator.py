@@ -61,9 +61,18 @@ def hashFilesList(dirList):
     The function uses the reference of the array.
 
     """
-    # TODO: output progress of hashing
+
+    timeStart = datetime.today()
+    fileName_time = timeStart.strftime("%Y%m%d_%H%M%S-%f")
+    print("\nCalculating file hashes now.\nStart time: " + timeStart.strftime("%Y/%m/%d %H:%M:%S.%f"))
+    
     for i in range(len(dirList)):
+        #time.sleep(0.1) #sleep just to see the output
+        print("\rfile: " + str(i+1) + " of " + str(len(dirList)) + " (" + "{:.0f}".format(round( i/len(dirList),2) * 100 ) + "%)", end='') 
         dirList[i].hashValue = hashFile(dirList[i].fullFilePath())
+        
+    timeEnd = datetime.today()
+    print("\nEnd time: " + timeEnd.strftime("%Y/%m/%d %H:%M:%S.%f"))
 
 
 def countFiles(dir, basePath, recursive):
@@ -93,8 +102,10 @@ def countFiles(dir, basePath, recursive):
 
                 #time.sleep(0.2) #sleep just to see the output
                 path = entry.path[len(basePath):]
-                
-                newFile = fileObject.fileObject(basePath, path, "")
+
+                mtime = datetime.fromtimestamp(os.path.getmtime(entry.path)).strftime("%Y/%m/%d %H:%M:%S")
+                ctime = datetime.fromtimestamp(os.path.getctime(entry.path)).strftime("%Y/%m/%d %H:%M:%S")
+                newFile = fileObject.fileObject(basePath, path, "", mtime, ctime)
                 filePaths.append(newFile)
                 
                 #filePaths.append(entry.path)
@@ -147,20 +158,21 @@ def writeFile(filesInPaths, fileEncoding):
 
     """
     
-    print("Writing hashes to file now.")
-    timeNow = datetime.today()
-    fileName_time = timeNow.strftime("%Y%m%d_%H%M%S-%f")
-    
+    timeStart = datetime.today()
+    fileName_time = timeStart.strftime("%Y%m%d_%H%M%S-%f")
+    print("\nWriting hashes to file now. File Timestamp: " + fileName_time)
+
     try:
         with open(fileName_time + "_fileHash.csv", "w", encoding=fileEncoding) as file:
-            file.write("Hash Value\tBase Path\tFile Path\tFile Name\n")
+            file.write("#\tHash Value\tBase Path\tFile Path\tFile Name\tModified Time\tCreated Time\n")
             for i in range(len(filesInPaths)):
                 try:
-                    file.write(filesInPaths[i].csvOutput("\t"))
+                    file.write(str(i+1) + "\t" + filesInPaths[i].csvOutput("\t"))
                 except:
                     print(datetime.today(), "#error writeFile() Oops! I am unable to write to file! The error returned is:", sys.exc_info()[0])
                     print(datetime.today(), "#error writeFile()", sys.exc_info()[1])
                     print(datetime.today(), "#error writeFile() the file is:", filesInPaths[i].basePath, filesInPaths[i].filePath)
+        
     except:
         print(datetime.today(), "#error writeFile() Oops! I am unable to write to file! The error returned is:", sys.exc_info()[0])
         print(datetime.today(), "#error writeFile()", sys.exc_info()[1])
@@ -191,7 +203,7 @@ for directory in config["basePath"]:
     print("Recursive:", recursive)
     filePaths += countFiles(directory["path"], directory["path"], recursive)
 
-print("There are " + str(len(filePaths)) + " files", end="\n")
+print("\nThere are " + str(len(filePaths)) + " files", end="\n")
 
 hashFilesList(filePaths) #pass by reference note
 
